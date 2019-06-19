@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <title>player1</title>
+    <script src="/socket.io/socket.io.js"></script>
+<body>
+<script>
+    var socket = io.connect();
+    socket.on('player1_hidden', function(data){
+
+    });
+    function f(e) { socket.emit("player", {"player1": e});}
+</script>
+<!--<div>This is our player1.html file</div>-->
+<button onclick="f('up')">Up</button>
+<button onclick="f('down')">Down</button>
+<button onclick="f('left')">Left</button>
+<button onclick="f('right')">Right</button>
+</body>
+</html>

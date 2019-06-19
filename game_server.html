@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="utf-8" />
+    <title>GameServer</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * { padding: 0; margin: 0; }
+        canvas { background: #eee; display: block; margin: 0 auto; }
+    </style>
+</head>
+<body>
+<canvas id="myCanvas" width="1600" height="900"></canvas>
+    <script>
+        var socket = io.connect();
+        socket.on('player1', function(data){
+            console.log(data);
+        });
+        socket.on('player2', function(data){
+            console.log(data);
+        });
+
+    </script>
+</body>
+</html>
