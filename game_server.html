@@ -4,22 +4,297 @@
     <meta charset="utf-8" />
     <title>GameServer</title>
     <script src="/socket.io/socket.io.js"></script>
-    <style>
-        * { padding: 0; margin: 0; }
-        canvas { background: #eee; display: block; margin: 0 auto; }
-    </style>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <link rel="stylesheet" href="/style.css">
+<!--    <style>-->
+<!--        * { padding: 0; margin: 0; }-->
+<!--        canvas { background: #eee; display: block; margin: 0 auto; }-->
+<!--    </style>-->
 </head>
 <body>
-<canvas id="myCanvas" width="1600" height="900"></canvas>
-    <script>
-        var socket = io.connect();
-        socket.on('player1', function(data){
-            console.log(data);
-        });
-        socket.on('player2', function(data){
-            console.log(data);
-        });
+<script>
+    var socket = io.connect(), player1position = 1, player2position = 1, player1live = 1, player2live = 1,
+        player1confirm = false, player2confirm = false;
+    socket.on('player1', function(data){
+        console.log(data);
+        choose(data, "player1");
+    });
+    socket.on('player2', function(data){
+        console.log(data);
+        choose(data, "player2");
+    });
+    function doMove(player, x, y) {
+        if(player=="player1") {
+            $("#b"+player1position.toString()).removeClass("green");
+            $("#b"+player1position.toString()).addClass("yellow");
+            while(x != 0) {
+                if(player1position % 5 != 0 && x > 0) {
+                    x -= 1;
+                    player1position ++;
+                    continue;
+                }
+                if(player1position % 5 == 0 && x > 0) {
+                    x = 0;
+                    break;
+                }
+                if(player1position % 5 != 1 && x < 0) {
+                    x += 1;
+                    player1position --;
+                    continue;
+                }
+                if(player1position % 5 == 1 && x < 0) {
+                    x = 0;
+                    break;
+                }
+                break;
+            }
+            while(y != 0) {
+                if( y > 0 && player1position + 5 <= 25) {
+                    y -= 1;
+                    player1position +=5;
+                    continue;
+                }
+                if(y > 0 && player1position + 5 > 25) {
+                    y = 0;
+                    break;
+                }
+                if(y < 0 && player1position - 5 >= 1) {
+                    y += 1;
+                    player1position -= 5;
+                    continue;
+                }
+                if(y < 0 && player1position -5 < 1) {
+                    y = 0;
+                    break;
+                }
+                break;
+            }
+            $("#b"+player1position.toString()).removeClass("red");
+            $("#b"+player1position.toString()).removeClass("yellow");
+            $("#b"+player1position.toString()).addClass("green");
+        }
+        if (player == "player2") {
+            $("#b"+player2position.toString()).removeClass("blue");
+            $("#b"+player2position.toString()).addClass("yellow");
+            while(x != 0) {
+                if(player2position % 5 != 0 && x > 0) {
+                    x -= 1;
+                    player2position ++;
+                    continue;
+                }
+                if(player2position % 5 == 0 && x > 0) {
+                    x = 0;
+                    break;
+                }
+                if(player2position % 5 != 1 && x < 0) {
+                    x += 1;
+                    this.player2position --;
+                    continue;
+                }
+                if(player2position % 5 == 1 && x < 0) {
+                    x = 0;
+                    break;
+                }
+                break;
+            }
+            while(y != 0) {
+                if( y > 0 && player2position + 5 <= 25) {
+                    y -= 1;
+                    player2position +=5;
+                    continue;
+                }
+                if(y > 0 && player2position + 5 > 25) {
+                    y = 0;
+                    break;
+                }
+                if(y < 0 && player2position - 5 >= 1) {
+                    y += 1;
+                    player2position -= 5;
+                    continue;
+                }
+                if(y < 0 && player2position -5 < 1) {
+                    y = 0;
+                    break;
+                }
+                break;
+            }
+            $("#b"+player2position.toString()).removeClass("red");
+            $("#b"+player2position.toString()).removeClass("yellow");
+            $("#b"+player2position.toString()).addClass("blue");
+        }
+    }
+    function underAttack(posit) {
+        $("#b"+posit.toString()).removeClass("yellow");
+        $("#b"+posit.toString()).addClass("red");
+        if(player1position == posit) {
+            player1live -= 1;
+        }
+        if(player2position == posit) {
+            player2live -= 1;
+        }
+        if(player1live == 0 && player2live == 0) {
+            socket.emit("hidden", {"gametype": "tie"});
+            $(".card0").hide();
+            $(".tie").show();
+        } else if (player2live == 0) {
+            $(".win1").show();
+            $(".card0").hide();
+            socket.emit("hidden", {"gametype": "play1win"});
+        } else if (player1live == 0) {
+            $(".win2").show();
+            $(".card0").hide();
+            socket.emit("hidden", {"gametype": "play2win"});
+        }
+    }
+    function choose(data, player) {
+        var p = player;
+        if (data[p] === "login") {
+            login(p);
+        } else if (data[p] === "logout") {
+            logout(player);
+        } else if (data[p] === "position") {
+            if(player == "player1") {
+                player1position = data["key"];
+            } else {
+                player2position = data["key"];
+            }
+            // setPosition(p, data["position"]);
+        } else if (data[p] === "confirm") {
+            setConfirm(p);
+        } else if (data[p] === "drawcard") {
+            drawCard(p);
 
-    </script>
+        } else if (data[p] === "card"){
+            if(data["key"]["type"] == "a") {
+                var len = data["key"]["list"].length;
+                for (var i=0; i < len;i++) {
+                    underAttack(data["key"]["list"][i]);
+                }
+            }
+            if (data["key"]["type"] == "m") {
+                doMove(player, data["key"]["x"], data["key"]["y"]);
+            }
+        }
+    }
+
+    function drawCard(player) {
+        let t = player;
+        var type = card_type[Math.floor(Math.random()*2)];
+        if (type == 'm') {
+            var x, y;
+            x = move[Math.floor(Math.random()*5)];
+            y = move[Math.floor(Math.random()*5)];
+            // player
+            if (t == "player1")
+                socket.emit("hidden", {"player1": "getcard", "type": "m", "x":x, "y":y});
+            else
+                socket.emit("hidden", {"player2": "getcard", "type": "m", "x":x, "y":y});
+        } else {
+            var range_ = range[Math.floor(Math.random()*6)];
+            var attack_list = []
+            while(range_ > 0) {
+                range_ -=1;
+                attack_list.push(Math.floor(Math.random()*25) + 1)
+            }
+            if(t == "player1")
+                socket.emit("hidden", {"player1": "getcard", "type": "a", "list": attack_list});
+            else
+                socket.emit("hidden", {"player2": "getcard", "type": "a", "list": attack_list});
+        }
+    }
+
+    var gameStage = 0;
+    var loginPlayer1 = false;
+    var loginPlayer2 = false;
+    function setConfirm(player){
+        if(player == "player1") {
+            player1confirm = true;
+        } else {
+            player2confirm = true;
+        }
+        if(player1confirm && player2confirm) {
+            gameStage = 2;
+            socket.emit("hidden", {"gametype": "draw"});
+            $(".start").hide();
+            $(".card0").show();
+
+        }
+    }
+    function logout(player) {
+        if(player== "player1") {
+            loginPlayer1 =false;
+        } else if(player=="player2") {
+            loginPlayer2 = false;
+        }
+        if (!(loginPlayer1 && loginPlayer2)) {
+            gameStage = 0;
+            socket.emit("hidden", {"gametype": "waiting"});
+        }
+    }
+    function login(e) {
+        if (e == "player1") {
+            loginPlayer1 = true;
+        } else if(e == "player2") {
+            loginPlayer2 = true;
+        }
+        if (loginPlayer1 && loginPlayer2) {
+            gameStage = 1;
+            socket.emit("hidden", {"gametype": "start"});
+            $(".waiting").hide();
+            $(".start").show();
+        }
+
+    }
+    var card_type = ['m', 'a'];
+    var move= [-2, -1, 0, 1, 2];
+    var range= [1, 1, 1, 2, 2, 3];
+
+</script>
+<!--<canvas id="myCanvas" width="1600" height="900"></canvas>-->
+<H1 class="waiting">Waiting for login</H1>
+<H1 class="start" style="display:none" >Waiting for choose position</H1>
+<H1 class="card0" style="display:none" >Attacking!!!!</H1>
+<H1 class="win1" style="display:none" >Play 1 Win!!!!</H1>
+<H1 class="win2" style="display:none" >Play 2 Win!!!!</H1>
+<H1 class="tie" style="display:none" > Tie!!!!</H1>
+<H1 id="player1position" style="display:none" ></H1>
+<H1 id="player2position" style="display:none" ></H1>
+<div class="card0" style="display:none; margin-left: 500px" >
+        <button id=b1 class="card0 btn yellow" style="display:none" onclick="b('1')">01</button>
+        <button id=b2 class="card0 btn yellow" style="display:none" onclick="b('2')">02</button>
+        <button id=b3 class="card0 btn yellow" style="display:none" onclick="b('3')">03</button>
+        <button id=b4 class="card0 btn yellow" style="display:none" onclick="b('4')">04</button>
+        <button id=b5 class="card0 btn yellow" style="display:none" onclick="b('5')">05</button>
+        <br class="position">
+
+        <button id=b6 class="card0 btn yellow" style="display:none" onclick="b('6')">06</button>
+        <button id=b7 class="card0 btn yellow" style="display:none" onclick="b('7')">07</button>
+        <button id=b8 class="card0 btn yellow" style="display:none" onclick="b('8')">08</button>
+        <button id=b9 class="card0 btn yellow" style="display:none" onclick="b('9')">09</button>
+        <button id=b10 class="card0 btn yellow" style="display:none" onclick="b('10')">10</button>
+        <br class="position">
+        <button id=b11 class="card0 btn yellow" style="display:none" onclick="b('11')">11</button>
+        <button id=b12 class="card0 btn yellow" style="display:none" onclick="b('12')">12</button>
+        <button id=b13 class="card0 btn yellow" style="display:none" onclick="b('13')">13</button>
+        <button id=b14 class="card0 btn yellow" style="display:none" onclick="b('14')">14</button>
+        <button id=b15 class="card0 btn yellow" style="display:none" onclick="b('15')">15</button>
+        <br class="position">
+        <button id=b16 class="card0 btn yellow" style="display:none" onclick="b('16')">16</button>
+        <button id=b17 class="card0 btn yellow"  style="display:none" onclick="b('17')">17</button>
+        <button id=b18 class="card0 btn yellow" style="display:none" onclick="b('18')">18</button>
+        <button id=b19 class="card0 btn yellow" style="display:none" onclick="b('19')">19</button>
+        <button id=b20 class="card0 btn yellow" style="display:none" onclick="b('20')">20</button>
+        <br class="position">
+        <button id=b21 class="card0 btn yellow" style="display:none" onclick="b('21')">21</button>
+        <button id=b22 class="card0 btn yellow" style="display:none" onclick="b('22')">22</button>
+        <button id=b23 class="card0 btn yellow" style="display:none" onclick="b('23')">23</button>
+        <button id=b24 class="card0 btn yellow" style="display:none" onclick="b('24')">24</button>
+        <button id=b25 class="card0 btn yellow" style="display:none" onclick="b('25')">25</button>
+        <br class="position">
+</div>
+
+
+
 </body>
+
 </html>

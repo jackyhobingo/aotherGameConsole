@@ -3,18 +3,225 @@
 <head>
     <title>player1</title>
     <script src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <link rel="stylesheet" href="/style.css">
 <body>
 <script>
     var socket = io.connect();
+    let position = 1;
+    let confirm = 0;
+    let cards = 0;
+    let Cards = [];
+    let CardsInfo = [];
+    let addposition = -1;
+    function f(e) { socket.emit("player", {"player1": e});}
+    function f2(key, value) { socket.emit("player", { "player1": key, key: value});}
+
     socket.on('player1_hidden', function(data){
+        console.log(data);
+        if(data.hasOwnProperty("player1")) {
+
+            if(data["player1"] == "getcard" && cards < 5){
+                cards += 1;
+                if(data["type"] == "m") {
+                    var moveStr = "";
+                    var x = data["x"];
+                    var y = data["y"];
+                    if(x == 0 && y == 0 ) {
+                        moveStr = "Stay!!!";
+                    }
+                    if (x > 0) {
+                        moveStr += "To right " + x.toString() + "\n";
+                    }
+                    if (x < 0) {
+                        moveStr += "To left " + Math.abs(x).toString() + "\n";
+                    }
+                    if (y > 0) {
+                        moveStr += "To down " + y.toString() + "\n";
+                    }
+                    if (y < 0) {
+                        moveStr += "To up " + Math.abs(y).toString() + "\n";
+                    }
+                    if(y==0) {
+                        moveStr += "\n";
+                    }
+                    if(x==0) {
+                        moveStr += "\n";
+                    }
+                    if(addposition == -1) {
+                        CardsInfo.push(moveStr);
+                        Cards.push({"type": "m", "x": data["x"], "y": data["y"]});
+                    } else {
+                        CardsInfo[addposition] = moveStr;
+                        Cards[addposition] = {"type": "m", "x": data["x"], "y": data["y"]};
+                    }
+
+                }
+                else {
+                    var attackStr = "Attack number " + data["list"].toString();
+                    var attackCard = {"type": "a", "list": data["list"]};
+                    if(addposition == -1) {
+                        CardsInfo.push(attackStr);
+                        Cards.push(attackCard);
+                    } else {
+                        CardsInfo[addposition] = attackStr;
+                        Cards[addposition] = attackCard;
+                    }
+                }
+
+                for(var i=1;i<=cards;i++) {
+
+                    $("p#card"+i.toString()).html(CardsInfo[i-1]);
+                    if(Cards[i-1]["type"] == "a") {
+                        $("#c"+i.toString()).addClass("red");
+                    } else {
+                        $("#c"+i.toString()).addClass("green");
+                    }
+                }
+
+            }
+        }
+        if(data.hasOwnProperty("gametype")) {
+            if(data["gametype"] == "start") {
+                // language=JQuery-CSS
+                $("button#login").hide();
+                $("button#logout").hide();
+
+                $(".position").show();
+            } else if (data["gametype"] == "draw") {
+                $(".position").hide();
+                drawCards(5);
+                $(".gamestart").show()
+            } else if (data["gametype"] == "play1win") {
+                $(".gamestart").hide();
+                $(".win").show()
+            } else if (data["gametype"] == "play2win") {
+                $(".gamestart").hide();
+                $(".lose").show()
+            }  else if (data["gametype"] == "tie") {
+                $(".gamestart").hide();
+                $(".tie").show()
+            }
+        }
 
     });
-    function f(e) { socket.emit("player", {"player1": e});}
+    function drawCards(x) {
+        for(var i=0;i< x; i++) {
+            f("drawcard");
+        }
+    }
+    function login() {
+        $('button#login').hide();
+        $("button#logout").show();
+        f("login");
+    }
+    function logout() {
+        $('button#login').show();
+        $("button#logout").hide();
+        f("logout");
+    }
+    function b(num) {
+        if(!confirm) {
+            console.log(position);
+            $("#b"+position.toString()).removeClass(" green");
+            position = parseInt(num);
+            $("#b"+position.toString()).addClass(" green");
+            f2("position",num);
+            $("p#position").html(position)
+        }
+    }
+    function c(num) {
+        $("#c"+num).removeClass("green");
+        $("#c"+num).removeClass("red");
+        $("#card"+num).html("");
+        var i = parseInt(num);
+        i -= 1;
+        cards-=1;
+        addposition = i;
+        delete CardsInfo[i];
+        var t = Cards[i];
+        delete Cards[i];
+
+        f2("card", t);
+
+        f("drawcard");
+    }
+    function doConfirm() {
+        confirm = 1;
+        f("confirm");
+        $("#correct").addClass("red");
+    }
 </script>
 <!--<div>This is our player1.html file</div>-->
-<button onclick="f('up')">Up</button>
-<button onclick="f('down')">Down</button>
-<button onclick="f('left')">Left</button>
-<button onclick="f('right')">Right</button>
+<h1 class="win" style="display:none">You Win !!!</h1>
+<h1 class="lose" style="display:none">You Lose !!!</h1>
+<h1 class="tie" style="display:none">Tie !!!</h1>
+<button id=login class="btn green" onclick="login();">login</button>
+<button id=logout class="btn yellow" style="display:none" onclick="logout()">logout</button>
+<button style="display:none" onclick="f('up')">Up</button>
+<button style="display:none" onclick="f('down')">Down</button>
+<button style="display:none" onclick="f('left')">Left</button>
+<div class="gamestart" style="display:none">
+    <p class="gamestart" id="position"></p>
+    <table>
+        <tr>
+            <td>
+                <button id=c1 class="gamestart btn" style="display:none" onclick="c('1')">Card1</button>
+                <p id="card1" class="cardinfo gamestart"></p>
+            </td>
+            <td>
+                <button id=c2 class="gamestart btn" style="display:none" onclick="c('2')">Card2</button>
+                <p id="card2" class="cardinfo gamestart"></p>
+            </td>
+            <td>
+                <button id=c3 class="gamestart btn" style="display:none" onclick="c('3')">Card3</button>
+                <p id="card3" class="cardinfo gamestart"></p>
+            </td>
+            <td>
+                <button id=c4 class="gamestart btn" style="display:none" onclick="c('4')">Card4</button>
+                <p id="card4" class="cardinfo gamestart"></p>
+            </td>
+            <td>
+                <button id=c5 class="gamestart btn" style="display:none" onclick="c('5')">Card5</button>
+                <p id="card5" class="cardinfo gamestart"></p>
+            </td>
+        </tr>
+    </table>
+
+</div>
+<div class="position" style="display:none">
+    <button id=b1 class="position btn green" style="display:none" onclick="b('1')">01</button>
+    <button id=b2 class="position btn" style="display:none" onclick="b('2')">02</button>
+    <button id=b3 class="position btn" style="display:none" onclick="b('3')">03</button>
+    <button id=b4 class="position btn" style="display:none" onclick="b('4')">04</button>
+    <button id=b5 class="position btn" style="display:none" onclick="b('5')">05</button>
+    <button id=correct class="position btn" style="display:none" onclick="doConfirm()">OK</button>
+    <br class="position">
+
+    <button id=b6 class="position btn" style="display:none" onclick="b('6')">06</button>
+    <button id=b7 class="position btn" style="display:none" onclick="b('7')">07</button>
+    <button id=b8 class="position btn" style="display:none" onclick="b('8')">08</button>
+    <button id=b9 class="position btn" style="display:none" onclick="b('9')">09</button>
+    <button id=b10 class="position btn" style="display:none" onclick="b('10')">10</button>
+    <br class="position">
+    <button id=b11 class="position btn" style="display:none" onclick="b('11')">11</button>
+    <button id=b12 class="position btn" style="display:none" onclick="b('12')">12</button>
+    <button id=b13 class="position btn" style="display:none" onclick="b('13')">13</button>
+    <button id=b14 class="position btn" style="display:none" onclick="b('14')">14</button>
+    <button id=b15 class="position btn" style="display:none" onclick="b('15')">15</button>
+    <br class="position">
+    <button id=b16 class="position btn" style="display:none" onclick="b('16')">16</button>
+    <button id=b17 class="position btn" style="display:none" onclick="b('17')">17</button>
+    <button id=b18 class="position btn" style="display:none" onclick="b('18')">18</button>
+    <button id=b19 class="position btn" style="display:none" onclick="b('19')">19</button>
+    <button id=b20 class="position btn" style="display:none" onclick="b('20')">20</button>
+    <br class="position">
+    <button id=b21 class="position btn" style="display:none" onclick="b('21')">21</button>
+    <button id=b22 class="position btn" style="display:none" onclick="b('22')">22</button>
+    <button id=b23 class="position btn" style="display:none" onclick="b('23')">23</button>
+    <button id=b24 class="position btn" style="display:none" onclick="b('24')">24</button>
+    <button id=b25 class="position btn" style="display:none" onclick="b('25')">25</button>
+    <br class="position">
+</div>
 </body>
 </html>
